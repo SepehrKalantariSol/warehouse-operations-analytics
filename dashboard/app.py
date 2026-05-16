@@ -12,10 +12,9 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(DASHBOARD_DIR))
 
 import streamlit as st
+from components import hero_banner, kpi_card, spacer
 from utils import (
-    BASE_CSS,
     PALETTE,
-    kpi_card,
     load_summary_kpis,
     page_config,
 )
@@ -38,17 +37,10 @@ with st.sidebar:
     st.caption("Data: Jan 2024 – Jun 2025 · 5,000 orders")
 
 # ── Header ─────────────────────────────────────────────────────────────────────
-st.markdown(
-    f"""
-    <div style="background: linear-gradient(135deg, {PALETTE['primary']} 0%, #457B9D 100%);
-                padding: 40px 36px; border-radius: 14px; color: white; margin-bottom: 28px;">
-        <h1 style="color:white; margin:0; font-size:2.2rem;">🏭 Warehouse Operations Analytics</h1>
-        <p style="color:#a8c8e8; margin: 8px 0 0; font-size:1.05rem;">
-            Production Intelligence Dashboard · BMW-Style Manufacturing Analytics
-        </p>
-    </div>
-    """,
-    unsafe_allow_html=True,
+hero_banner(
+    title="🏭 Warehouse Operations Analytics",
+    subtitle="Production Intelligence Dashboard · BMW-Style Manufacturing Analytics",
+    primary=PALETTE["primary"],
 )
 
 # ── Quick KPIs ─────────────────────────────────────────────────────────────────
@@ -81,7 +73,7 @@ try:
 except Exception as e:
     st.error(f"Could not load KPIs: {e}. Ensure preprocess.py has been run.")
 
-st.markdown("<br>", unsafe_allow_html=True)
+spacer()
 
 # ── Project overview ───────────────────────────────────────────────────────────
 st.markdown("### About This Project")
