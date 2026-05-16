@@ -104,12 +104,8 @@ warehouse-operations-analytics/
 │   ├── warehouse_orders_clean.csv    # Enriched dataset (26 features)
 │   └── warehouse.db                  # SQLite database (orders + ml_features tables)
 │
-├── models/
-│   └── model_metadata.json    # Accuracy, confusion matrix, feature importance
-│
-├── notebooks/                 # EDA notebook (coming soon)
-├── reports/                   # Analysis report (coming soon)
-└── tests/                     # Unit tests (coming soon)
+└── models/
+    └── model_metadata.json    # Accuracy, confusion matrix, feature importance
 ```
 
 ---
