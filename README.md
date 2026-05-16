@@ -46,6 +46,18 @@ Four interactive pages built with Streamlit + Plotly:
 | **Delay Prediction** | Live ML inference form, risk gauge, feature importance, confusion matrix |
 | **Recommendations** | 7 severity-filtered business insights with findings, actions, and quantified metrics |
 
+### Screenshots
+
+![Home](docs/home.png)
+
+![Operations Overview](docs/operations-overview.png)
+
+![Bottleneck Analysis](docs/bottleneck-analysis.png)
+
+![Delay Prediction](docs/delay-prediction.png)
+
+![Recommendations](docs/recommendations.png)
+
 ---
 
 ## Machine Learning
