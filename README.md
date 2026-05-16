@@ -133,7 +133,7 @@ warehouse-operations-analytics/
 
 ```bash
 # Clone and enter the project
-git clone https://github.com/<your-username>/warehouse-operations-analytics.git
+git clone https://github.com/SepehrKalantariSol/warehouse-operations-analytics.git
 cd warehouse-operations-analytics
 
 # Create virtual environment
