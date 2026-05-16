@@ -10,6 +10,7 @@ sys.path.insert(0, str(DASHBOARD_DIR))
 
 import streamlit as st
 
+from components import rec_card, spacer
 from utils import PALETTE, load_recommendations, load_summary_kpis, page_config
 
 page_config("Recommendations")
@@ -49,32 +50,17 @@ filtered = recs if selected_severity == "All" else [
     r for r in recs if r["severity"].lower() == selected_severity.lower()
 ]
 
-st.markdown(f"<br>", unsafe_allow_html=True)
+spacer()
 
 # ── Recommendation cards ───────────────────────────────────────────────────────
-SEV_ICONS = {"high": "🔴", "medium": "🟡", "low": "🟢"}
-
 for r in filtered:
-    sev = r["severity"]
-    icon = SEV_ICONS.get(sev, "⚪")
-
-    st.markdown(
-        f"""
-        <div class="rec-card {sev}">
-            <span class="badge badge-{sev}">{icon} {sev.upper()}</span>
-            &nbsp;
-            <span class="badge badge-category">{r['category']}</span>
-            <div class="rec-title">{r['title']}</div>
-            <div class="rec-section">
-                <b>Finding:</b> {r['finding']}
-            </div>
-            <div class="rec-section">
-                <b>Recommended Action:</b> {r['action']}
-            </div>
-            <div class="rec-metric">📊 {r['metric']}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    rec_card(
+        severity=r["severity"],
+        category=r["category"],
+        title=r["title"],
+        finding=r["finding"],
+        action=r["action"],
+        metric=r["metric"],
     )
 
 # ── Executive summary ──────────────────────────────────────────────────────────

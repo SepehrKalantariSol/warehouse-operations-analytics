@@ -13,13 +13,13 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import streamlit as st
 
+from components import kpi_card, spacer
 from utils import (
     CONG_COLORS,
     PALETTE,
     PLOTLY_LAYOUT,
     SHIFT_COLORS,
     ZONE_COLORS,
-    kpi_card,
     load_monthly_trend,
     load_priority_performance,
     load_shift_performance,
@@ -69,7 +69,7 @@ with c5:
         accent=PALETTE["neutral"],
     )
 
-st.markdown("<br>", unsafe_allow_html=True)
+spacer()
 
 # ── Volume and zone delay ──────────────────────────────────────────────────────
 section_header("Order Distribution", "Volume by shift and delay rate by zone")
