@@ -57,6 +57,7 @@ PRE_ORDER_FEATURES = [
 # ── Data loading ───────────────────────────────────────────────────────────────
 
 def load_features(db_path: Path = DB_PATH) -> tuple[pd.DataFrame, pd.Series]:
+    # Reads ml_features table from SQLite — returns X (features) and y (delayed label) separately
     conn = sqlite3.connect(db_path)
     cols = ", ".join(PRE_ORDER_FEATURES + ["delayed"])
     df = pd.read_sql_query(f"SELECT {cols} FROM ml_features", conn)
@@ -67,6 +68,7 @@ def load_features(db_path: Path = DB_PATH) -> tuple[pd.DataFrame, pd.Series]:
 # ── Training ───────────────────────────────────────────────────────────────────
 
 def train(X_train: pd.DataFrame, y_train: pd.Series) -> RandomForestClassifier:
+    # Trains a 200-tree RandomForest — class_weight="balanced" handles the delay/no-delay imbalance
     model = RandomForestClassifier(
         n_estimators=200,
         max_depth=12,
@@ -87,6 +89,7 @@ def evaluate(
     y_test: pd.Series,
     n_train: int,
 ) -> dict:
+    # Calculates all metrics: accuracy, precision, recall, F1, ROC-AUC, confusion matrix, feature importance
     y_pred = model.predict(X_test)
     y_proba = model.predict_proba(X_test)[:, 1]
     cm = confusion_matrix(y_test, y_pred).tolist()
@@ -116,6 +119,7 @@ def save_model(
     model_path: Path = MODEL_PATH,
     meta_path: Path = METADATA_PATH,
 ) -> None:
+    # Saves the trained model as a .joblib file and the metrics as model_metadata.json
     model_path.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(model, model_path)
     with open(meta_path, "w") as f:
@@ -126,6 +130,7 @@ def load_model(
     model_path: Path = MODEL_PATH,
     meta_path: Path = METADATA_PATH,
 ) -> tuple[RandomForestClassifier, dict]:
+    # Loads the saved model and its metadata — used by the dashboard to run live predictions
     model = joblib.load(model_path)
     with open(meta_path) as f:
         metadata = json.load(f)
@@ -138,10 +143,7 @@ def predict_proba_single(
     model: RandomForestClassifier,
     feature_values: list[float],
 ) -> float:
-    """
-    Returns delay probability (0–1) for one order.
-    feature_values must be in PRE_ORDER_FEATURES order.
-    """
+    # Returns delay probability (0–1) for one order — feature_values must match PRE_ORDER_FEATURES order
     arr = np.array(feature_values, dtype=float).reshape(1, -1)
     return float(model.predict_proba(arr)[0, 1])
 
@@ -149,6 +151,7 @@ def predict_proba_single(
 # ── Entry point ────────────────────────────────────────────────────────────────
 
 def main() -> None:
+    # Entry point — loads data, trains model, prints all metrics, and saves model + metadata to disk
     print("Loading features...")
     X, y = load_features()
     print(f"  Samples: {len(X):,}  |  Delay rate: {y.mean():.1%}")

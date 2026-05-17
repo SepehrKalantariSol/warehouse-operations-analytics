@@ -33,6 +33,7 @@ DB_PATH = ROOT / "data" / "warehouse.db"
 
 @contextmanager
 def get_connection(db_path: Path = DB_PATH):
+    # Opens a connection to warehouse.db and closes it automatically when done
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
@@ -49,7 +50,7 @@ def _q(conn: sqlite3.Connection, sql: str) -> pd.DataFrame:
 # ── KPIs ───────────────────────────────────────────────────────────────────────
 
 def summary_kpis(conn: sqlite3.Connection) -> dict:
-    """Headline metrics for the overview page."""
+    # Returns headline KPIs: total orders | delay rate | avg times | avg items | avg distance
     row = _q(conn, """
         SELECT
             COUNT(*)                                AS total_orders,
@@ -70,7 +71,7 @@ def summary_kpis(conn: sqlite3.Connection) -> dict:
 # ── Zone analysis ──────────────────────────────────────────────────────────────
 
 def zone_performance(conn: sqlite3.Connection) -> pd.DataFrame:
-    """Per-zone KPIs ranked by delay rate descending."""
+    # Returns delay rate, avg times, and time_ratio per zone — sorted worst to best
     return _q(conn, """
         SELECT
             zone,
@@ -92,6 +93,7 @@ def zone_performance(conn: sqlite3.Connection) -> pd.DataFrame:
 # ── Shift analysis ─────────────────────────────────────────────────────────────
 
 def shift_performance(conn: sqlite3.Connection) -> pd.DataFrame:
+    # Returns delay rate, avg times, and avg picker experience per shift (Morning | Evening | Night)
     return _q(conn, """
         SELECT
             shift,
@@ -117,10 +119,7 @@ def shift_performance(conn: sqlite3.Connection) -> pd.DataFrame:
 # ── Congestion impact ──────────────────────────────────────────────────────────
 
 def congestion_impact(conn: sqlite3.Connection) -> pd.DataFrame:
-    """
-    Returns per-congestion-level stats plus a 'pick_time_multiplier' column
-    showing pick time relative to the Low congestion baseline.
-    """
+    # Compares Low | Medium | High congestion — adds pick_time_multiplier showing how much slower High is vs Low baseline
     df = _q(conn, """
         SELECT
             congestion_level,
@@ -149,6 +148,7 @@ def congestion_impact(conn: sqlite3.Connection) -> pd.DataFrame:
 # ── Equipment impact ───────────────────────────────────────────────────────────
 
 def equipment_impact(conn: sqlite3.Connection) -> pd.DataFrame:
+    # Compares orders where equipment was available vs unavailable — adds pack_time_multiplier
     df = _q(conn, """
         SELECT
             CASE WHEN equipment_available = 1 THEN 'Available'
@@ -170,10 +170,7 @@ def equipment_impact(conn: sqlite3.Connection) -> pd.DataFrame:
 # ── Picker experience vs delay ─────────────────────────────────────────────────
 
 def experience_vs_delay(conn: sqlite3.Connection) -> pd.DataFrame:
-    """
-    Buckets picker experience (1–3 Junior, 4–6 Mid, 7–10 Senior)
-    and shows delay rate + picking efficiency per bucket.
-    """
+    # Groups pickers into Junior (1-3yr) | Mid (4-6yr) | Senior (7-10yr) and compares delay rate and pick speed
     return _q(conn, """
         SELECT
             CASE
@@ -195,6 +192,7 @@ def experience_vs_delay(conn: sqlite3.Connection) -> pd.DataFrame:
 # ── Priority performance ───────────────────────────────────────────────────────
 
 def priority_performance(conn: sqlite3.Connection) -> pd.DataFrame:
+    # Returns delay rate and avg time vs SLA target for each priority tier (Urgent | High | Medium | Low)
     return _q(conn, """
         SELECT
             order_priority,
@@ -216,7 +214,7 @@ def priority_performance(conn: sqlite3.Connection) -> pd.DataFrame:
 # ── Time series ────────────────────────────────────────────────────────────────
 
 def monthly_trend(conn: sqlite3.Connection) -> pd.DataFrame:
-    """Monthly order volume + delay trend for time-series chart."""
+    # Returns order volume and delay rate per month — used for the time-series trend chart
     df = _q(conn, """
         SELECT
             STRFTIME('%Y-%m', order_date)           AS year_month,
@@ -233,7 +231,7 @@ def monthly_trend(conn: sqlite3.Connection) -> pd.DataFrame:
 
 
 def day_of_week_trend(conn: sqlite3.Connection) -> pd.DataFrame:
-    """Average delay rate by day of week (0=Mon … 6=Sun)."""
+    # Returns average delay rate by day of week (Mon=0 to Sun=6)
     df = _q(conn, """
         SELECT
             order_day_of_week,
@@ -252,10 +250,7 @@ def day_of_week_trend(conn: sqlite3.Connection) -> pd.DataFrame:
 # ── Heatmap ────────────────────────────────────────────────────────────────────
 
 def zone_shift_heatmap(conn: sqlite3.Connection) -> pd.DataFrame:
-    """
-    Returns a pivot table: zones as rows, shifts as columns,
-    values = delay_rate_pct. Ready to pass to Plotly imshow.
-    """
+    # Returns a pivot table of delay rates: zones as rows, shifts as columns — used for the heatmap chart
     df = _q(conn, """
         SELECT
             zone,
@@ -270,7 +265,7 @@ def zone_shift_heatmap(conn: sqlite3.Connection) -> pd.DataFrame:
 # ── Slow orders ────────────────────────────────────────────────────────────────
 
 def slow_orders(conn: sqlite3.Connection, top_n: int = 100) -> pd.DataFrame:
-    """Top N orders by time_ratio — used to surface extreme bottleneck cases."""
+    # Returns the worst N delayed orders ranked by time_ratio — surfaces the most extreme bottleneck cases
     return _q(conn, f"""
         SELECT
             order_id,
@@ -298,14 +293,8 @@ def slow_orders(conn: sqlite3.Connection, top_n: int = 100) -> pd.DataFrame:
 # ── Composite bottleneck summary ───────────────────────────────────────────────
 
 def bottleneck_summary(conn: sqlite3.Connection) -> pd.DataFrame:
-    """
-    Composite zone-level bottleneck score:
-        score = 0.4 × normalised_delay_rate
-              + 0.4 × normalised_avg_time_ratio
-              + 0.2 × normalised_avg_pick_per_item
-
-    Score 0–100; higher = bigger bottleneck.
-    """
+    # Ranks all zones by a composite bottleneck score (0–100): delay rate + time ratio + pick speed
+    # Higher score = bigger bottleneck — used to prioritise which zone to fix first
     df = zone_performance(conn)
 
     def _norm(series: pd.Series) -> pd.Series:
@@ -326,6 +315,7 @@ def bottleneck_summary(conn: sqlite3.Connection) -> pd.DataFrame:
 # ── CLI summary ────────────────────────────────────────────────────────────────
 
 def _print_section(title: str, df_or_dict) -> None:
+    # Helper that prints a titled section to the console — handles both dicts and DataFrames
     print(f"\n{'═' * 55}")
     print(f"  {title}")
     print(f"{'═' * 55}")
@@ -337,6 +327,7 @@ def _print_section(title: str, df_or_dict) -> None:
 
 
 def main() -> None:
+    # Entry point — prints all KPI tables to the terminal so you can quickly inspect the database
     with get_connection() as conn:
         _print_section("HEADLINE KPIs", summary_kpis(conn))
         _print_section("ZONE PERFORMANCE", zone_performance(conn))

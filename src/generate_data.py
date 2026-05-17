@@ -38,16 +38,20 @@ PRIORITY_TARGET = {"Low": 55, "Medium": 45, "High": 38, "Urgent": 28}
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _clamp(arr: np.ndarray, lo: float, hi: float) -> np.ndarray:
+    # Clips array values between lo and hi
     return np.clip(arr, lo, hi)
 
 
 def _choice(options: list, size: int, p: list | None = None) -> np.ndarray:
+    # Randomly picks from options n times, with optional probability weights
     return RNG.choice(options, size=size, p=p)
 
 
 # ── Column generators ─────────────────────────────────────────────────────────
 
 def generate_orders(n: int) -> pd.DataFrame:
+    # Builds the basic order skeleton: order_id | order_date | shift | zone | order_priority
+    # Dates are weighted so Mon–Wed get more orders than weekends (realistic seasonality)
     dates = pd.date_range(START_DATE, END_DATE, periods=n)
     # Inject realistic weekly seasonality (higher volume Mon–Wed)
     day_weights = np.array([1.3, 1.2, 1.1, 1.0, 0.9, 0.7, 0.6])
@@ -71,6 +75,7 @@ def generate_orders(n: int) -> pd.DataFrame:
 
 
 def generate_operational_features(df: pd.DataFrame) -> pd.DataFrame:
+    # Adds operational conditions to each order: items_count | picker_experience | distance_travelled | congestion_level | equipment_available
     n = len(df)
 
     df["items_count"] = RNG.integers(1, 51, size=n)
@@ -87,6 +92,8 @@ def generate_operational_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def generate_times(df: pd.DataFrame) -> pd.DataFrame:
+    # Calculates how long each order took: picking_time | packing_time | total_time | target_time
+    # picking_time is affected by zone, experience, congestion, and equipment
     n = len(df)
 
     zone_factor = df["zone"].map(ZONE_PICKING_FACTOR).to_numpy()
@@ -116,10 +123,8 @@ def generate_times(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def generate_delay_label(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Delay is primarily driven by total_time vs target_time, with a stochastic
-    component to reflect real-world unpredictability (unrecorded incidents, etc.)
-    """
+    # Assigns delayed = 1 or 0 to each order based on time_ratio and shift bias
+    # Uses a sigmoid curve so orders close to the SLA boundary have realistic uncertainty
     time_ratio = df["total_time"] / df["target_time"]
     shift_bias = df["shift"].map(SHIFT_DELAY_BIAS).to_numpy()
 
@@ -134,6 +139,7 @@ def generate_delay_label(df: pd.DataFrame) -> pd.DataFrame:
 # ── Validation ────────────────────────────────────────────────────────────────
 
 def validate(df: pd.DataFrame) -> None:
+    # Checks the dataset is clean: no nulls, no duplicate IDs, delay rate within realistic range
     assert df.isnull().sum().sum() == 0, "Unexpected nulls in dataset"
     assert df["order_id"].is_unique, "Duplicate order IDs detected"
     assert 0.10 <= df["delayed"].mean() <= 0.60, "Delay rate outside plausible range"
@@ -144,7 +150,7 @@ def validate(df: pd.DataFrame) -> None:
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main() -> None:
-    print("Generating warehouse operations dataset...")
+    # Entry point — runs all 4 generation steps in order, validates, then saves to CSV
 
     df = generate_orders(N_ORDERS)
     df = generate_operational_features(df)

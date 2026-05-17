@@ -23,12 +23,14 @@ DB_PATH = ROOT / "data" / "warehouse.db"
 # ── 1. Load & validate ─────────────────────────────────────────────────────────
 
 def load_raw(path: Path = RAW_CSV) -> pd.DataFrame:
+    # Reads the raw CSV and checks all required columns exist before proceeding
     df = pd.read_csv(path, parse_dates=["order_date"])
     _validate_schema(df)
     return df
 
 
 def _validate_schema(df: pd.DataFrame) -> None:
+    # Raises an error if any required column is missing from the raw data
     required = {
         "order_id", "order_date", "shift", "zone", "order_priority",
         "items_count", "picker_experience", "distance_travelled",
@@ -43,6 +45,7 @@ def _validate_schema(df: pd.DataFrame) -> None:
 # ── 2. Clean ───────────────────────────────────────────────────────────────────
 
 def clean(df: pd.DataFrame) -> pd.DataFrame:
+    # Removes duplicates, fixes data types, and clips outliers to keep data volume intact
     df = df.copy()
 
     # Remove duplicates
@@ -82,6 +85,8 @@ def clean(df: pd.DataFrame) -> pd.DataFrame:
 # ── 3. Feature engineering ─────────────────────────────────────────────────────
 
 def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
+    # Creates new columns from existing ones: time_ratio | workload_index | is_experienced | equipment_penalty | is_weekend etc.
+    # time_ratio is the most important: >1.0 means the order breached its SLA
     df = df.copy()
 
     # Time-based
@@ -151,6 +156,8 @@ ML_FEATURES = [
 
 
 def encode_for_ml(df: pd.DataFrame) -> pd.DataFrame:
+    # Converts text categories to numbers so the ML model can process them
+    # e.g. Morning=0, Evening=1, Night=2 | Low=0, Medium=1, High=2, Urgent=3
     enc = df[["order_id"]].copy()
 
     enc["shift_encoded"] = df["shift"].map(_SHIFT_MAP)
@@ -177,6 +184,8 @@ def save_to_sqlite(
     df_ml: pd.DataFrame,
     db_path: Path = DB_PATH,
 ) -> None:
+    # Saves two tables to warehouse.db: 'orders' (human-readable) and 'ml_features' (encoded for ML)
+    # Also creates indexes on zone, shift, date, and delayed for faster dashboard queries
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path)
 
@@ -213,6 +222,7 @@ def save_to_sqlite(
 # ── Summary report ─────────────────────────────────────────────────────────────
 
 def print_summary(df: pd.DataFrame) -> None:
+    # Prints a summary report showing row count, delay rate, and delay breakdown by zone and shift
     print(f"\n{'─'*50}")
     print(f"  Rows          : {len(df):,}")
     print(f"  Columns       : {len(df.columns)}")
@@ -245,6 +255,7 @@ def print_summary(df: pd.DataFrame) -> None:
 # ── Entry point ────────────────────────────────────────────────────────────────
 
 def main() -> None:
+    # Entry point — runs the full pipeline: load → clean → engineer → encode → save to SQLite
     print("Loading raw data...")
     df_raw = load_raw()
     print(f"  Raw rows: {len(df_raw):,}")

@@ -28,6 +28,7 @@ from analysis import (
 
 
 def generate_recommendations(conn: sqlite3.Connection) -> list[dict]:
+    # Pulls live KPIs from the database and generates up to 7 recommendations — each with severity, title, finding, action, and metric
     kpis = summary_kpis(conn)
     zone_df = zone_performance(conn)
     shift_df = shift_performance(conn)
@@ -203,6 +204,7 @@ def generate_recommendations(conn: sqlite3.Connection) -> list[dict]:
 
 
 def main() -> None:
+    # Entry point — prints all recommendations to the terminal with severity icons
     with get_connection() as conn:
         recs = generate_recommendations(conn)
 
