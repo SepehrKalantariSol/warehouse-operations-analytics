@@ -35,3 +35,6 @@ models/*.joblib
 # Secrets / environment
 .env
 *.env.local
+
+# CV / personal documents
+*.pdf
